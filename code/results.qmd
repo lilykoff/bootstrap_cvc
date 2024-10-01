@@ -1,0 +1,236 @@
+---
+title: "Bootstrap Concordance "
+format: html
+editor: visual
+cache: true
+---
+
+```{r}
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(paletteer)
+theme_set(theme_light()) 
+# read in data
+```
+
+
+```{r}
+#| eval: false 
+conc10 = readRDS(here::here("results", "concordance_10.rds"))
+conc50 = readRDS(here::here("results", "concordance_50.rds"))
+conc100 = readRDS(here::here("results", "concordance_100.rds"))
+conc500 = readRDS(here::here("results", "concordance_500.rds"))
+
+conc10_summ = 
+  conc10 %>% 
+  group_by(variable, boot = `repeat`) %>%
+  mutate(ind = row_number(),
+         rep = floor((row_number()-1)/10)) %>% 
+  group_by(rep, boot, variable) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  ungroup()
+
+conc50_summ = 
+  conc50 %>% 
+  group_by(variable, boot = `repeat`) %>%
+  mutate(ind = row_number(),
+         rep = floor((row_number()-1)/10)) %>% 
+  group_by(rep, boot, variable) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  ungroup()
+
+conc100_summ =
+  conc100 %>% 
+  group_by(variable, boot = `repeat`) %>%
+  mutate(ind = row_number(),
+         rep = floor((row_number()-1)/10)) %>% 
+  group_by(rep, boot, variable) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  ungroup()
+
+conc500_summ =
+  conc500 %>% 
+  group_by(variable, boot = `repeat`) %>%
+  mutate(ind = row_number(),
+         rep = floor((row_number()-1)/10)) %>% 
+  group_by(rep, boot, variable) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  ungroup()
+
+all_reps = 
+  conc500_summ %>% mutate(repeats = "500") %>% 
+  bind_rows(conc100_summ %>% mutate(repeats = "100")) %>% 
+  bind_rows(conc50_summ %>% mutate(repeats = "50")) %>%
+  bind_rows(conc10_summ %>% mutate(repeats = "10")) %>% 
+  mutate(repeats = factor(repeats, levels = c("10", "50", "100", "500")))
+
+saveRDS(all_reps, here::here("results", "results_summarized.rds"))
+```
+
+```{r}
+all_reps = readRDS(here::here("results", "results_summarized.rds"))
+```
+
+ 
+We have are interested in the concordance of a number of different variables in univariate Cox PH regression models. For each variable, we estimate 10-fold cross-validated concordance. For stability, we repeat the 10-fold cross validation. Here, we try: 
+
++ 10 repeats (10rcVC)
++ 50 repeats (50rcVC)
++ 100 repeats (100rcVC)
++ 500 repeats (500rcVC)
+
+We can visualize the distribution of concordance for each variable and each number of repeats: 
+
+
+```{r}
+all_reps %>% 
+  filter(boot == 1) %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  mutate(variable = fct_reorder(variable, concordance, .fun = mean)) %>%
+  ggplot(aes(x = variable, y = concordance, color = repeats))+
+  geom_violin(draw_quantiles = c(0.5)) +
+  scale_color_paletteer_d("ggthemr::flat")
+  labs(x = "Variable", y = "Concordance", title = "Concordance for Different # of Repeats of 10-fold Cross Validation") 
+
+```
+We can also visualize the cumulative mean concordance as we add more repeats: 
+
+```{r}
+all_reps %>% 
+  filter(boot == 1 & repeats == "100") %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  group_by(variable, repeats) %>% 
+  mutate(cum_mean = dplyr::cummean(concordance)) %>% 
+  ggplot(aes(x = rep, y = cum_mean, color = variable))+
+  facet_wrap(.~variable, scales = "free_y") +
+  theme(legend.position = "none") +
+  geom_line() + 
+  scale_color_brewer(palette = "Dark2", direction = -1) +
+  labs(x = "# repetas", y = "Cumulative Mean Concordance")
+
+```
+At the end of the procedure, we have one concordance for each variable: the mean of the $x$ repeats (see below). Question:  how do we perform inference on concordance? 
+
+```{r}
+all_reps %>% 
+  filter(boot == 1) %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  group_by(variable, repeats) %>% 
+  summarize(across(concordance, mean)) %>% 
+  pivot_wider(names_from = repeats, values_from = concordance,
+              names_prefix = "repeats_") 
+
+```
+
+We can bootstrap the rcvC to get the distribution of the repeated concordance. To do this, we sample subjects with replacement from the population to obtain $B$ bootstrapped datasets. Then for each dataset $1, \dots, B$ we calculate the rcvC. Below, we can plot the cumulative mean concordance for 20 different bootstrapped samples. Below, each color line is one bootstrapped sample, while the black dashed line is the mean concordance over the 20 samples.
+
+```{r}
+#| include: false 
+all_reps %>% 
+  filter(variable == "age_in_years_at_screening") %>% 
+  ggplot(aes(y = concordance, x = repeats, color = repeats))+
+  geom_violin(draw_quantiles = c(0.025, 0.5, 0.975)) + 
+  theme_bw() + 
+  scale_color_brewer(palette = "Dark2")+
+  theme(legend.position = "none")
+
+```
+
+
+```{r} 
+means = 
+  all_reps %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  filter(repeats == "100") %>% 
+  filter(boot <= 20) %>% 
+  group_by(variable) %>% 
+  summarize(across(concordance, mean))
+
+all_reps %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  filter(repeats == "100") %>% 
+  filter(boot <= 20) %>% 
+  group_by(variable, boot) %>% 
+  mutate(cum_mean = dplyr::cummean(concordance)) %>% 
+  ggplot(aes(x = rep, y = cum_mean, color = factor(boot)))+
+  geom_line(alpha = .8)+
+  facet_grid(.~variable) + 
+  theme_light() + 
+  theme(legend.position = "none") + 
+  labs(x = "Repeats", y = "Cumulative Mean Concordance",
+       title = "Cumulative Mean Concordance of Age for 20 Different Bootstrap Resamples")+
+  geom_hline(data = means, aes(yintercept = concordance), color = "black", linetype = "dashed")
+
+```
+We can also look at the distributions over $B=1000$ samples: 
+
+
+```{r}
+
+all_reps %>%
+  filter(repeats == "100") %>% 
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  group_by(boot, variable) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  mutate(variable = sub(".*total\\_", "", variable)) %>%
+  mutate(variable = fct_reorder(variable, concordance, .fun = mean)) %>%
+  ggplot(aes(y = concordance, x = variable, color = variable))+
+  geom_violin(draw_quantiles = c(.025, 0.5, 0.975)) +
+  theme_bw() +
+  # facet_wrap(.~repeats) + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.position = "none") +
+  scale_color_brewer(palette = "Dark2") + 
+  labs(x = "Variable", y = "Concordance", title = "Distribution of 100rcvC for 1000 Bootstrapped Samples") 
+
+
+
+means =
+  all_reps %>%
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  group_by(repeats, variable) %>%
+  summarize(across(concordance, mean))
+
+all_reps %>%
+  group_by(repeats, boot, variable) %>%
+  summarize(concordance = mean(concordance)) %>%
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  ungroup() %>%
+  group_by(repeats, variable) %>%
+  mutate(cum_mean = dplyr::cummean(concordance)) %>%
+  ggplot(aes(y = cum_mean, x = boot, color = repeats))+
+  geom_line() +
+  facet_wrap(.~variable) + 
+  geom_hline(data = means, aes(yintercept = concordance), color = "black") +
+  scale_color_paletteer_d("ggthemr::flat") + 
+  labs(x = "# bootstraps", y = "Cumulative Mean Concordance", title = "Cumulative Mean Concordance for 1000 Bootstrapped Samples")
+
+# 
+# x = all_reps %>% 
+#   filter(repeats=="100") %>% 
+#   filter(variable %in% c("total_adeptsteps", "total_scrfsteps")) %>% 
+#   group_by(boot, variable)  %>% 
+#   summarize(across(concordance, ~mean(.x))) %>% 
+#   pivot_wider(names_from = variable, values_from = concordance,
+#               id_cols = boot)
+# 
+# t.test(x$total_adeptsteps, x$total_scrfsteps, paired = TRUE)
+```
+Interestingly, it doesn't seem to matter how many repeats we perform of the cross-validation, if we do 1000 bootstraps: 
+
+```{r}
+all_reps %>%
+  filter(variable %in% c("age_in_years_at_screening", "total_adeptsteps", "total_scrfsteps", "bin_mobilityproblem")) %>% 
+  group_by(boot, variable, repeats) %>% 
+  summarize(across(concordance, ~mean(.x))) %>% 
+  mutate(variable = sub(".*total\\_", "", variable)) %>%
+  mutate(variable = fct_reorder(variable, concordance, .fun = mean)) %>%
+  ggplot(aes(y = concordance, x = variable, color = repeats))+
+  geom_violin(draw_quantiles = c(.025, 0.5, 0.975)) +
+  scale_color_paletteer_d("ggthemr::flat") +
+  # facet_wrap(.~repeats) + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) +
+  labs(x = "Variable", y = "Concordance", title = "Distribution of rcvC for 1000 Bootstrapped Samples") 
+
+```
