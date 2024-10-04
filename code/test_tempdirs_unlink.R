@@ -126,6 +126,9 @@ folds = vfold_cv(surv_df, v = 10, repeats = 500)
 
 plan(future::multisession, workers = n_cores)
 
+future::plan(sequential)
+
+
 # results =
 #   furrr::future_map_dfr(
 #     .x = vars,
@@ -141,5 +144,5 @@ plan(future::multisession, workers = n_cores)
 
 
 
-unlink(tempdir(), recursive = TRUE)
+# unlink(tempdir(), recursive = TRUE)
 
