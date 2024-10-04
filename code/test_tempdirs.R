@@ -27,11 +27,11 @@ if(!dir.exists(here::here("results", "bootstrap_500"))){
 }
 
 
-if (!file.exists(here::here(
-  "results",
-  "bootstrap_500",
-  paste0("fold_", ifold, ".rds")
-)) | force) {
+# if (!file.exists(here::here(
+#   "results",
+#   "bootstrap_500",
+#   paste0("fold_", ifold, ".rds")
+# )) | force) {
   survival_metrics = metric_set(concordance_survival)
   survreg_spec = proportional_hazards() %>%
     set_engine("survival") %>%
@@ -83,7 +83,7 @@ if (!file.exists(here::here(
     # return as tibble
     tibble(concordance = concordance_vec,
            variable = var)
-  }
+
 
 
   demo_vars = c(
@@ -139,7 +139,7 @@ if (!file.exists(here::here(
 
   # saveRDS(results, here::here("results", "bootstrap_500", fname))
 
-}
+
 
 # unlink(tempdir(), recursive = TRUE)
 
