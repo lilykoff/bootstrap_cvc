@@ -122,7 +122,7 @@ if(!dir.exists(here::here("results", "bootstrap_500"))){
 
   set.seed(4575)
   folds = vfold_cv(surv_df, v = 10, repeats = 500)
-  fname = paste0("fold_", ifold, ".rds")
+  # fname = paste0("fold_", ifold, ".rds")
 
   plan(future::multisession, workers = n_cores)
 
