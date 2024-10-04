@@ -83,7 +83,7 @@ if(!dir.exists(here::here("results", "bootstrap_500"))){
     # return as tibble
     tibble(concordance = concordance_vec,
            variable = var)
-
+}
 
 
   demo_vars = c(
