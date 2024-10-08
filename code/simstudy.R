@@ -2,7 +2,7 @@
 library(simstudy)
 # https://www.rdatagen.net/post/2023-06-20-finding-coefficients-for-logistic-models-that-generate-data-with-desired-characteristics/
 
-coefs1 = c(0.15)
+coefs1 <- c(0.15, 0.25, 0.10, 0.30)
 
 d1 = defData(varname = "x1", formula = 0, variance = 1)
 # d1 <- defData(d1, varname = "x2", formula = 0, variance = 1)

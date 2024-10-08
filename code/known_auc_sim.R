@@ -26,7 +26,7 @@ temp_settings = data_gen_tibble %>%
 
 # coefs1 = c(0.15)
 
-# normal rv with mean 0 variance 1
+# normal rv with meanj 0 variance 1
 d1 = defData(varname = "x1", formula = 0, variance = 1)
 
 
@@ -34,7 +34,8 @@ d1 = defData(varname = "x1", formula = 0, variance = 1)
 # d1 <- defData(d1, varname = "b1", formula = 0.3, dist = "binary")
 # d1 <- defData(d1, varname = "b2", formula = 0.7, dist = "binary")
 
-C1 = logisticCoefs(d1, temp_settings$coefs, popPrev = temp_settings$prev, auc = temp_settings$auc)
+C1 = logisticCoefs(d1, temp_settings$coefs, popPrev = temp_settings$prev, auc = temp_settings$auc,
+                   sampleSize = 1000000)
 
 d1a = defData(d1, varname = "y",
               formula = "t(..C1) %*% c(1, x1)",
@@ -42,7 +43,9 @@ d1a = defData(d1, varname = "y",
       )
 
 # test
-dd = genData(n = temp_settings$n, d1a)
+# dd = genData(n = temp_settings$n, d1a)
+dd = genData(n = 1000000, d1a)
+
 
 actual_prev = dd[, mean(y)]
 fit = rms::lrm(y ~ x1, data = dd)
@@ -62,7 +65,7 @@ wflow = workflow() %>%
   add_variables(outcomes = y, predictors = x1)
 
 set.seed(4575)
-folds = vfold_cv(dd_dat, v = 10, repeats = 500)
+folds = vfold_cv(dd_dat, v = 10, repeats = 10)
 
 # fit model on folds
 res = fit_resamples(
