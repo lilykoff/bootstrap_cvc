@@ -10,7 +10,7 @@ if(!dir.exists(here::here("results", "auc_sim"))){
 
 # for now do normal RV
 data_gen_tibble =
-  expand_grid(
+  tidyr::expand_grid(
     n = c(500, 1000, 2500, 5000, 10000),
     prev = c(0.05, 0.1, 0.2, 0.3, 0.4, 0.5),
     auc = c(0.6, 0.7, 0.8, 0.9),
@@ -91,4 +91,4 @@ auc_by_repeat %>%
     target_auc = temp_settings$auc,
     target_coefs = temp_settings$coefs
   ) %>%
-  write_rds(here::here("results", "auc_sim", paste0("fold_", ifold, ".rds")))
+  readr::write_rds(here::here("results", "auc_sim", paste0("fold_", ifold, ".rds")))
