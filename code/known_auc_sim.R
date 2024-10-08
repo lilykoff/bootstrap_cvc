@@ -41,6 +41,7 @@ d1a = defData(d1, varname = "y",
               dist = "binary", link = "logit"
       )
 
+# test
 dd = genData(n = temp_settings$n, d1a)
 
 actual_prev = dd[, mean(y)]
