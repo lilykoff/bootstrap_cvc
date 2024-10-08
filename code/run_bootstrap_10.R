@@ -17,85 +17,65 @@ bs_obj = readRDS(here::here("data", "bootstrap_obj.rds"))
 ifold = get_fold()
 if (!is.na(ifold)) {
   df = bs_obj[[ifold]]
+  df = df %>%
+    mutate(mortstat = factor(mortstat))
 }
 
 rm(bs_obj)
 
-if(!dir.exists(here::here("results", "bootstrap_10"))){
-  dir.create(here::here("results", "bootstrap_10"))
+if(!dir.exists(here::here("results", "bootstrap_10_auc"))){
+  dir.create(here::here("results", "bootstrap_10_auc"))
 }
 
 
 if (!file.exists(here::here(
   "results",
-  "bootstrap_10",
+  "bootstrap_10_auc",
   paste0("fold_", ifold, ".rds")
 )) | force) {
-  survival_metrics = metric_set(concordance_survival)
-  survreg_spec = proportional_hazards() %>%
-    set_engine("survival") %>%
-    set_mode("censored regression")
+
+  auc_metric = metric_set(roc_auc)
+  log_spec = logistic_reg() %>%
+    set_engine("glm") %>%
+    set_mode("classification")
 
 
   fit_model = function(var, folds, spec, metrics, mort_df) {
     require(tidyverse)
     require(tidymodels)
-    require(censored)
-    # create workflow
+
     wflow = workflow() %>%
       add_model(spec) %>%
-      add_variables(outcomes = mort_surv, predictors = all_of(var)) %>%
-      add_case_weights(case_weights_imp)
+      add_variables(outcomes = mortstat, predictors = all_of(var)) # Assuming mort_binary is the binary outcome variable
 
     # fit model on folds
     res = fit_resamples(
       wflow,
       resamples = folds,
-      metrics = metrics,
+      metrics = metrics, # Set AUC as part of the metrics
       control = control_resamples(save_pred = TRUE)
     )
 
-    # get metrics -- for some reason if you just use collect_metrics it doesn't take into account case weights,
-    # so we write this function to get concordance
-    get_concordance = function(row_num, preds, surv_df) {
-      preds %>%
-        slice(row_num) %>%
-        unnest(.predictions) %>%
-        select(.pred_time, .row, mort_surv) %>%
-        left_join(surv_df %>% select(row_ind, case_weights_imp),
-                  by = c(".row" = "row_ind")) %>%
-        concordance_survival(truth = mort_surv,
-                             estimate = ".pred_time",
-                             case_weights = case_weights_imp) %>%
-        pull(.estimate)
-    }
 
-    # get concordance for each fold
-    concordance_vec = map_dbl(
-      .x = 1:nrow(res),
-      .f = get_concordance,
-      preds = res,
-      surv_df = mort_df
+    preds = collect_predictions(res)
 
-    )
-    rm(res)
-    # return as tibble
-    tibble(concordance = concordance_vec,
-           variable = var)
+    # Group by the 'id' column (which tracks repeat and fold information) and calculate AUC per repeat
+    auc_by_repeat = preds %>%
+      group_by(id, id2) %>%  # 'id' includes both repeat and fold information
+      roc_auc(truth = mortstat, event_level = "second", .pred_1)  %>%
+      group_by(id) %>%
+      summarize(auc = mean(.estimate))
+
+    # Return AUC values as tibble
+    auc_by_repeat %>%
+      mutate(variable = var)
   }
 
 
   demo_vars = c(
     "age_in_years_at_screening",
-    "cat_bmi",
     "gender",
-    "race_hispanic_origin",
-    "bin_diabetes",
     "cat_education",
-    "chf",
-    "chd",
-    "heartattack",
-    "stroke",
     "cancer",
     "cat_alcohol",
     "cat_smoke",
@@ -104,23 +84,16 @@ if (!file.exists(here::here(
   )
   pa_vars =
     df %>%
-    select(contains("total")) %>%
+    select(total_AC, total_PAXMTSM, total_adeptsteps, total_scrfsteps,
+           total_scsslsteps, total_oaksteps, total_vsrevsteps) %>%
     colnames()
 
   vars = c(demo_vars, pa_vars)
 
-  df = df %>%
-    mutate(weight = full_sample_2_year_mec_exam_weight / 2, weight_norm = weight / mean(weight))
 
-  # create a survival object
-  surv_df =
-    df %>%
-    mutate(mort_surv = Surv(event_time, mortstat)) %>%
-    mutate(case_weights_imp = hardhat::importance_weights(weight_norm)) %>%
-    mutate(row_ind = row_number())
 
   set.seed(4575)
-  folds = vfold_cv(surv_df, v = 10, repeats = 10)
+  folds = vfold_cv(df, v = 10, repeats = 10)
   fname = paste0("fold_", ifold, ".rds")
 
   plan(future::multisession, workers = n_cores)
@@ -129,13 +102,15 @@ if (!file.exists(here::here(
     furrr::future_map_dfr(
       .x = vars,
       .f = fit_model,
-      spec = survreg_spec,
-      metrics = survival_metrics,
+      spec = log_spec,
+      metrics = auc_metric,
       folds = folds,
-      mort_df = surv_df,
+      mort_df = df,
       .options = furrr_options(seed = TRUE, globals = TRUE)
     )
 
-  saveRDS(results, here::here("results", "bootstrap_10", fname))
+  saveRDS(results, here::here("results", "bootstrap_10_auc", fname))
 
 }
+
+plan(sequential)
