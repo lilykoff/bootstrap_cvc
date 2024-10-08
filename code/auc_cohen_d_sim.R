@@ -5,6 +5,7 @@ library(furrr)
 n_cores = parallelly::availableCores() - 1
 # print(n_cores)
 source(here::here("code/utils.R"))
+library(AUC)
 
 if(!dir.exists(here::here("results", "cohen_d_sim"))){
   dir.create(here::here("results", "cohen_d_sim"))
@@ -36,7 +37,7 @@ wflow = workflow() %>%
 
 get_auc = function(n_repeats = 100, n_folds = 10, sample_df){
   set.seed(4575)
-  sample_auc = AUC::auc(roc(sample_df$predictor, sample_df$outcome))
+  sample_auc = AUC::auc(AUC::roc(sample_df$predictor, sample_df$outcome))
   folds = vfold_cv(sample_df, v = n_folds, repeats = n_repeats)
   res = fit_resamples(
     wflow,
