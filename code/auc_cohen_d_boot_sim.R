@@ -18,7 +18,8 @@ ifold = get_fold()
 
 df = df_list[[ifold]]
 
-df %>%
+df =
+  df %>%
   mutate(outcome = factor(outcome))
 
 rm(df_list)
