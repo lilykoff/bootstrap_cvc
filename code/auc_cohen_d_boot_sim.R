@@ -101,7 +101,7 @@ if (!file.exists(here::here(
       .options = furrr_options(seed = TRUE, globals = TRUE),
       .id = "boot"
     )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc_n1_", paste0("fold_", ifold, ".rds")))
+  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n1_fold_", ifold, ".rds")))
   rm(all_res)
 
   all_res =
@@ -113,7 +113,7 @@ if (!file.exists(here::here(
       .options = furrr_options(seed = TRUE, globals = TRUE),
       .id = "boot"
     )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc_n2_", paste0("fold_", ifold, ".rds")))
+  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n2_fold_", ifold, ".rds")))
   rm(all_res)
 
   all_res_3 =
@@ -125,7 +125,7 @@ if (!file.exists(here::here(
       .options = furrr_options(seed = TRUE, globals = TRUE),
       .id = "boot"
     )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc_n3_", paste0("fold_", ifold, ".rds")))
+  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n3_fold_", ifold, ".rds")))
   rm(all_res)
 
   all_res_1 =
@@ -137,7 +137,7 @@ if (!file.exists(here::here(
       .options = furrr_options(seed = TRUE, globals = TRUE),
       .id = "boot"
     )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc_n4_", paste0("fold_", ifold, ".rds")))
+  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n4_fold_", ifold, ".rds")))
   rm(all_res)
 
   plan(sequential)
