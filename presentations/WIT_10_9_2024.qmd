@@ -1,0 +1,127 @@
+---
+title: "Inference for repeated cross-validated AUC/concordance" 
+execute: 
+  echo: false
+  cache: true
+  warning: false
+  message: false
+  eval: true
+format: 
+  revealjs:
+    reference-location: document
+    theme: dark
+    incremental: true
+    progress: true
+author: "Lily Koffman" 
+date: "11 October 2024"
+institute: "WIT"
+---
+
+
+```{r}
+#| include: false
+#| eval: true
+library(gt)
+library(tidyverse)
+`%notin%` = Negate(`%in%`)
+library(paletteer)
+
+# custom color palette
+# paletteer::paletteer_d("colorBlindness::paletteMartin")
+coladept = "#DB6D00FF"
+colsdt = "#920000FF"
+coloak = "#FF6DB6FF"
+colacti = "#490092FF"
+colvso = "#006DDBFF"
+colvsr = "#6DB6FFFF"
+colscr = "#004949FF"
+colscs= "#009292FF"
+
+
+```
+
+
+## Background
+
++ k-fold cross validation is standard procedure for estimating performance of model (e.g. AUC, concordance) 
++ One run of k-fold cross validation can create noisy estimate of model performance due to variation in splits of the data, especially in small datsets 
++ Repeated k-fold cross validation (simpy repeating the cross validation many times) leads to more stable estimates of model performance^[https://jcheminf.biomedcentral.com/articles/10.1186/1758-2946-6-10] 
++ Drawback: computation time 
+
+
+## Currently
+
++ We have used 100-times repeated 10-fold cross validated concordance (rcvC) in previous papers
++ [Evaluating the prediction performance of objective physical activity measures for incident Parkinson’s disease in the UK Biobank](https://link.springer.com/article/10.1007/s00415-023-11939-0)
++ **Question**: how to do inference on concordance - i.e. how to test if one model is better than another?
++ Can we get a 95\% CI for the rcvC? 
+
+## Intuition
+
++ rcvC is a random variable, with a distribution of values
++ We don't know the distribution of rcvC, but we can estimate it by bootstrapping
++ Resample subjects with replacement to create bootstrapped datasets
++ On each bootstrapped dataset, calculate rcvC 
++ Repeat *B* times 
++ Get 95\% CI for rcvC from bootstrapped values 
+
+## In practice
+
++ We are not aware of this being done 
++ We are not sure that this leads to a valid 95\% CI for the concordance 
+
+## Plan 
++ Simulate population of 1,000,000 data with known AUC and prevalence, since unclear on how to simulate data with known concordance  
++ Take sample from population 
++ Calculate 100x repeated 10-fold cross-validated AUC 
++ Create *B* bootstrapped samples from population
++ Calculate 100x repeated 10-fold cross-validated AUC on each bootstrapped sample
++ Use distribution of bootstrapped AUCs to get 95\% CI for population AUC 
+
+## Simulation details 
++ Simulate from distribution with known AUC 
++ [Transforming the Area under the Normal Curve (AUC) into Cohen’s d, Pearson’s r pb , Odds-Ratio, and Natural Log Odds-Ratio: Two Conversion Tables](https://www.researchgate.net/publication/322205695_Transforming_the_Area_under_the_Normal_Curve_AUC_into_Cohen's_d_Pearson's_r_pb_Odds-Ratio_and_Natural_Log_Odds-Ratio_Two_Conversion_Tables) provides formula for converting AUC into Cohen's *d*
++ Cohen's *d*: difference between two group means in terms of standard deviations 
++ Simulate $n * (1-\text{prevalence})$ observations for non-events from $N(0, 1)$ and $n * \text{prevalence}$ observations for events from $N(d, 1)$
+
+
+## Formulas
+
+$$ t= \sqrt{ln\frac{1}{(1-AUC)^2}} $$
+$$ z = t - \frac{2.515517 + 0.802853t + 0.0103328t^2}{1 + 1.432788t + 0.189269t^2 + 0.001308t^3} $$
+
+$$ d = z \sqrt{2} $$
+
+---
+
+## Code 
+
+```{r}
+#| echo: true
+#| eval: false 
+sim_known_auc = function(auc_target, n, prevalence) {
+  t <- sqrt(log(1 / (1 - auc_target) ** 2))
+  z <- t - ((2.515517 + 0.802853 * t + 0.0103328 * t ** 2) /
+              (1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3)
+  )
+  d <- z * sqrt(2)
+  x_events = rnorm(n * prevalence, mean = d)
+  x_nonevents = rnorm(n * (1 - prevalence), mean = 0)
+  y_events = rep(1, n * prevalence)
+  y_nonevents = rep(0, n * (1 - prevalence))
+  return(tibble(
+    predictor = c(x_events, x_nonevents),
+    outcome = c(y_events, y_nonevents)
+  ))
+  
+}
+```
+
+
+## Parameters
+
++ Sample size: $\{1000, 5000, 10000, 100000\}$
++ Population AUC: $\{0.6, 0.7, 0.8, 0.9\}$
++ Population prevalence: $\{0.05, 0.1, 0.2, 0.3, 0.4, 0.5\}$
+
+
