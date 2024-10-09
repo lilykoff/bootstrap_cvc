@@ -92,31 +92,31 @@ if (!file.exists(here::here(
       )
   }
   plan(multisession, workers = n_cores)
-  all_res =
-    future_map_dfr(
-      .x = bs_obj[[1]],
-      .f = get_auc,
-      n_repeats = 100,
-      n_folds = 10,
-      .options = furrr_options(seed = TRUE, globals = TRUE),
-      .id = "boot"
-    )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n1_fold_", ifold, ".rds")))
-  rm(all_res)
+  # all_res =
+  #   future_map_dfr(
+  #     .x = bs_obj[[1]],
+  #     .f = get_auc,
+  #     n_repeats = 100,
+  #     n_folds = 10,
+  #     .options = furrr_options(seed = TRUE, globals = TRUE),
+  #     .id = "boot"
+  #   )
+  # readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n1_fold_", ifold, ".rds")))
+  # rm(all_res)
+  #
+  # all_res =
+  #   future_map_dfr(
+  #     .x = bs_obj[[2]],
+  #     .f = get_auc,
+  #     n_repeats = 100,
+  #     n_folds = 10,
+  #     .options = furrr_options(seed = TRUE, globals = TRUE),
+  #     .id = "boot"
+  #   )
+  # readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n2_fold_", ifold, ".rds")))
+  # rm(all_res)
 
   all_res =
-    future_map_dfr(
-      .x = bs_obj[[2]],
-      .f = get_auc,
-      n_repeats = 100,
-      n_folds = 10,
-      .options = furrr_options(seed = TRUE, globals = TRUE),
-      .id = "boot"
-    )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n2_fold_", ifold, ".rds")))
-  rm(all_res)
-
-  all_res_3 =
     future_map_dfr(
       .x = bs_obj[[3]],
       .f = get_auc,
@@ -128,7 +128,7 @@ if (!file.exists(here::here(
   readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n3_fold_", ifold, ".rds")))
   rm(all_res)
 
-  all_res_1 =
+  all_res =
     future_map_dfr(
       .x = bs_obj[[4]],
       .f = get_auc,
