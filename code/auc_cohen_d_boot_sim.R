@@ -17,6 +17,10 @@ df_list = readRDS(here::here("data", "auc_known_list.rds"))
 ifold = get_fold()
 
 df = df_list[[ifold]]
+
+df %>%
+  mutate(outcome = factor(outcome))
+
 rm(df_list)
 n_vec = c(1000, 5000, 10000, 100000)
 set.seed(1233)
