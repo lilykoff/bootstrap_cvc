@@ -19,7 +19,7 @@ df =
   mutate(outcome = factor(outcome))
 
 n_vec = c(1000, 5000, 10000, 100000)
-
+set.seed(1233)
 samples = map(.x = n_vec,
               .f = function(n){
                 df %>%
