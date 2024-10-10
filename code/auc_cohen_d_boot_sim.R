@@ -10,7 +10,7 @@ source(here::here("code/utils.R"))
 fold = NULL
 rm(list = c("fold"))
 
-force = FALSE
+force = TRUE
 
 df_list = readRDS(here::here("data", "auc_known_list.rds"))
 
@@ -52,11 +52,14 @@ if(!dir.exists(here::here("results", "bootstrap_cohend_auc"))){
 }
 
 
-if (!file.exists(here::here(
-  "results",
-  "bootstrap_cohend_auc",
-  paste0("fold_", ifold, ".rds")
-)) | force) {
+# if (!file.exists(here::here(
+#   "results",
+#   "bootstrap_cohend_auc",
+#   paste0("fold_", ifold, ".rds")
+# )) | force) {
+if(!file.exists(here::here("results", "bootstrap_cohend_auc",
+                           paste0("n4_fold_", ifold, ".rds")))){
+
 
   auc_metric = metric_set(roc_auc)
   log_spec = logistic_reg() %>%
@@ -115,18 +118,18 @@ if (!file.exists(here::here(
   #   )
   # readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n2_fold_", ifold, ".rds")))
   # rm(all_res)
-
-  all_res =
-    future_map_dfr(
-      .x = bs_obj[[3]],
-      .f = get_auc,
-      n_repeats = 100,
-      n_folds = 10,
-      .options = furrr_options(seed = TRUE, globals = TRUE),
-      .id = "boot"
-    )
-  readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n3_fold_", ifold, ".rds")))
-  rm(all_res)
+#
+#   all_res =
+#     future_map_dfr(
+#       .x = bs_obj[[3]],
+#       .f = get_auc,
+#       n_repeats = 100,
+#       n_folds = 10,
+#       .options = furrr_options(seed = TRUE, globals = TRUE),
+#       .id = "boot"
+#     )
+#   readr::write_rds(all_res, here::here("results", "bootstrap_cohend_auc", paste0("n3_fold_", ifold, ".rds")))
+#   rm(all_res)
 
   all_res =
     future_map_dfr(
