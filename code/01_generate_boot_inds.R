@@ -1,0 +1,32 @@
+library(tidyverse)
+library(tidymodels)
+library(furrr)
+library(future)
+library(censored)
+n_cores = parallelly::availableCores() - 1
+print(n_cores)
+source(here::here("code/utils.R"))
+
+repeats = 1000
+B = 1000
+sample_sizes = c(1000, 5000, 10000, 100000)
+
+
+
+# function that, for each sample size, will generate indices for B bootstrapped samples
+gen_samples = function(seed, B, n){
+  set.seed(seed)
+  replicate(B, sample(1:n, n, replace = TRUE), simplify = FALSE)
+}
+
+
+plan(multisession, workers = n_cores)
+# create df to store the samples
+df = tidyr::expand_grid(rep = 1:repeats,
+                        n = sample_sizes) %>%
+  mutate(samples = future_map2(rep, n, ~ gen_samples(.x, B = B, n = .y)))
+plan(sequential)
+
+readr::write_rds(df, here::here("data", "bootstrap_indices.rds"), compress = "xz")
+
+
