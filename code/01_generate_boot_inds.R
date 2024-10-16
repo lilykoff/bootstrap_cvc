@@ -20,12 +20,10 @@ gen_samples = function(seed, B, n){
 }
 
 
-plan(multisession, workers = n_cores)
 # create df to store the samples
 df = tidyr::expand_grid(rep = 1:repeats,
                         n = sample_sizes) %>%
-  mutate(samples = future_map2(rep, n, ~ gen_samples(.x, B = B, n = .y)))
-plan(sequential)
+  mutate(samples = map2(rep, n, ~ gen_samples(.x, B = B, n = .y)))
 
 readr::write_rds(df, here::here("data", "bootstrap_indices.rds"), compress = "xz")
 
