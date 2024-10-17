@@ -15,11 +15,10 @@ B = 1000
 sample_sizes = c(1000, 5000, 10000, 100000)
 
 for(n in sample_sizes){
+  num = which(sample_sizes == n)
   file = file.path(here::here("data", "boot_inds", paste0("inds_n", num, "_repeat", ifold, ".rds")))
   if(!file.exists(file) || force){
     x = matrix(sample(1:n, B*n, replace = TRUE), nrow = B)
-    num = which(sample_sizes == n)
-    file = file.path(here::here("data", "boot_inds", paste0("inds_n", num, "_repeat", ifold, ".rds")))
     write_rds(x, here::here(file), compress = "xz")
     rm(x)
   }
