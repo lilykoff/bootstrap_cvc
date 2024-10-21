@@ -49,6 +49,7 @@ for(samp in sample_sizes){
   indices = matrix(sample(1:samp, B*samp, replace = TRUE), nrow = B)
   for(i in 1:nrow(xdf)){
     x = xdf[i,]
+    print(x)
     out_name = file.path(here::here("results", "boot_repeats", paste0("res_fold_", x$id, "_repeat_", ifold, ".rds")))
     if(!file.exists(out_name) || force){
       temp = try({
