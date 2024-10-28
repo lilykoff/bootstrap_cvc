@@ -13,7 +13,7 @@ rm(list = c("fold"))
 force = FALSE
 ifold = get_fold()
 data_gen_key = readRDS(here::here("data", "data_gen_key.rds"))
-sample_sizes = unique(data_gen_key$n)
+sample_sizes = unique(data_gen_key$n)[1:3]
 
 get_rcvauc = function(data, inds, n_folds = 10, n_repeats = 100){
   df = data[inds,]
